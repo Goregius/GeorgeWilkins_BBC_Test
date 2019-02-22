@@ -1,18 +1,25 @@
 <template>
   <div class="home">
-    <img alt="Vue logo" src="../assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+    <Article v-if="article" :article="article"/>
   </div>
 </template>
 
 <script>
+import { mapState } from 'vuex'
+
 // @ is an alias to /src
-import HelloWorld from '@/components/HelloWorld.vue'
+import Article from '@/components/Article.vue'
 
 export default {
   name: 'home',
   components: {
-    HelloWorld
+    Article
+  },
+  computed: mapState({
+    article: state => state.currentArticle
+  }),
+  created() {
+    this.$store.dispatch('updateCurrentArticle').catch(err => console.error(err));
   }
 }
 </script>

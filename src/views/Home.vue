@@ -1,25 +1,61 @@
 <template>
   <div class="home">
-    <Article v-if="article" :article="article"/>
+    <Article />
+    <span v-if="showButton">
+      <button
+        v-if="!$store.getters.noNewArticles"
+        @click="nextArticle"
+      >Next article</button>
+      <button
+        v-if="$store.getters.noNewArticles"
+        @click="goToReview"
+      >Go to review</button>
+    </span>
+
   </div>
 </template>
 
 <script>
-import { mapState } from 'vuex'
-
 // @ is an alias to /src
-import Article from '@/components/Article.vue'
+import Article from "@/components/Article.vue";
 
 export default {
-  name: 'home',
+  name: "home",
+  data() {
+    return {
+      showButton: false
+    };
+  },
   components: {
     Article
   },
-  computed: mapState({
-    article: state => state.currentArticle
-  }),
+  methods: {
+    nextArticle() {
+      this.showButton = false;
+      this.$store.dispatch("getNewArticle").then(() => this.showButton = true).catch(() => this.showButton = true)
+    },
+    goToReview() {
+      this.$store
+        .dispatch("articlesFinished")
+        .then(() => this.$router.push({ name: "review" }));
+    }
+  },
   created() {
-    this.$store.dispatch('updateCurrentArticle').catch(err => console.error(err));
+    this.$store
+      .dispatch("getCurrentArticle")
+      .then(() => this.showButton = true)
+      .catch(err => {
+        if (this.$store.state.allArticlesRead) {
+          this.$router.push({ name: "review" });
+        } else {
+          console.log(err);
+        }
+      });
   }
-}
+};
 </script>
+
+<style lang="scss">
+</style>
+
+

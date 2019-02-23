@@ -1,76 +1,110 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
+import axios from 'axios'
 
 Vue.use(Vuex)
 
-const store =  new Vuex.Store({
+const store = new Vuex.Store({
   state: {
-    articleNames: ['article-1', 'article-2', 'article-3', 'article-4', 'article-5'],
+    articleNamesLeft: ['article-1', 'article-2', 'article-3', 'article-4', 'article-5'],
+    articlesReviewed: [],
     currentArticleName: null,
     currentArticle: null,
+    allArticlesRead: false,
+    completed: false,
+    initialised: false
+  },
+  getters: {
+    noNewArticles: state => state.articleNamesLeft.length === 0
   },
   mutations: {
     initialiseStore(state) {
-			// Check if the ID exists
-			if(localStorage.getItem('store')) {
-				this.replaceState(
-					Object.assign(state, JSON.parse(localStorage.getItem('store')))
-				);
-      }
-      if (!state.currentArticleName) {
-        // Selects a random article.
-        state.currentArticleName = state.articleNames[Math.floor(Math.random()*state.articleNames.length)];
-      }
-      // Makes sure that state.articlseNames doesn't include the current article name
-      state.articleNames = state.articleNames.filter(name => name !== state.currentArticleName);
+      return new Promise(resolve => {
+        if (state.initialised) resolve();
+        // // TODO: uncomment when finished
+        // Check if the ID exists
+        if (localStorage.getItem('store')) {
+          this.replaceState(
+            Object.assign(state, JSON.parse(localStorage.getItem('store')))
+          );
+        }
+        if (!state.currentArticleName) {
+          // Selects a random article.
+          state.currentArticleName = state.articleNamesLeft[Math.floor(Math.random() * state.articleNamesLeft.length)];
+        }
+        // Makes sure that state.articlseNames doesn't include the current article name
+        state.articleNamesLeft = state.articleNamesLeft.filter(name => name !== state.currentArticleName);
+        state.initialised = true;
+        resolve();
+      })
+
+
     },
     newArticleName(state) {
-      if (state.articleNames.length === 0) return false; 
       // Selects a random article.
-      state.currentArticleName = state.articleNames[Math.floor(Math.random()*state.articleNames.length)];
+      state.currentArticleName = state.articleNamesLeft[Math.floor(Math.random() * state.articleNamesLeft.length)];
       // Removes the new article name from article names
-      state.articleNames = state.articleNames.filter(name => name !== state.currentArticleName);
-
-      return true;
+      state.articleNamesLeft = state.articleNamesLeft.filter(name => name !== state.currentArticleName);
     },
-    retrieveArticle(state) {
-      try {
-        state.currentArticle = require(`./assets/data/${state.currentArticleName}.json`);
-      } catch (error) {
-        state.currentArticleName = null;
-        state.currentArticle = null;
-        throw error;
+    retrieveArticle(state, article) {
+      state.currentArticle = article;
+      if (!state.articlesReviewed.some(articleData => articleData.title === state.currentArticle.title)) {
+        state.articlesReviewed.push({ title: state.currentArticle.title, name: state.currentArticleName });
       }
-      
+    },
+    allArticlesRead(state) {
+      state.allArticlesRead = true;
+    },
+    completed(state) {
+      state.completed = true;
     }
   },
   actions: {
     initialiseStore({ commit }) {
       commit('initialiseStore');
     },
-    getNewArticle({ commit }) {
-      // Simulating api
-      return new Promise((resolve, reject) => {
-        if (commit('newArticleName')) {
-          commit('retrieveArticle')
-          resolve(true);
+    async getNewArticle({ commit, getters, dispatch }) {
+      if (getters.noNewArticles) {
+        throw 'No more articles';
+      }
+      commit('newArticleName');
+      await dispatch('getCurrentArticle');
+
+    },
+    getCurrentArticle({ commit, state }) {
+      return new Promise(async (resolve, reject) => {
+        if (state.allArticlesRead) {
+          reject("All articles read.")
         }
-        else {
-          resolve(false);
+        try {
+          const article = (await axios.get(`https://raw.githubusercontent.com/bbc/news-coding-test-dataset/master/data/${state.currentArticleName}.json`)).data;
+          commit('retrieveArticle', article);
+          resolve('Article received');
+        } catch (error) {
+          state.currentArticleName = null;
+          state.currentArticle = null;
+          reject(error);
         }
-        reject("Error retrieving a new article.");
       })
     },
-    updateCurrentArticle({ commit }) {
+    articlesFinished({ commit }) {
       // Simulating api
-      return new Promise((resolve, reject) => {
-        try {
-          commit('retrieveArticle');
-          resolve();
-        } catch (error) {
-          reject("The article could not be loaded");
-        }
-      })
+      return new Promise((resolve) => {
+        commit('allArticlesRead');
+        resolve();
+      });
+    },
+    async postRankings({ commit }, rankings) {
+      function dummyPost() {
+        return () => new Promise(resolve => setTimeout(resolve(rankings), 20));
+      }
+
+      const response = await dummyPost(`api/rankings`, rankings);
+      commit('completed');
+      return response;
+    },
+    reset() {
+      localStorage.setItem('store', '{}');
     }
   }
 });
@@ -78,11 +112,14 @@ const store =  new Vuex.Store({
 // Subscribe to store updates
 store.subscribe((mutation, state) => {
   const store = {
-    articleNames: state.articleNames,
-    currentArticleName: state.currentArticleName
+    articleNamesLeft: state.articleNamesLeft,
+    currentArticleName: state.currentArticleName,
+    allArticlesRead: state.allArticlesRead,
+    articlesReviewed: state.articlesReviewed,
+    completed: state.completed
   }
-	// Store the state object as a JSON string
-	localStorage.setItem('store', JSON.stringify(store));
+  // Store the state object as a JSON string
+  localStorage.setItem('store', JSON.stringify(store));
 });
 
 export default store;

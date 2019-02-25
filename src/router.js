@@ -27,6 +27,7 @@ const router = new Router({
   ]
 });
 
+// Goes to the correct route depending on the vuex state
 router.beforeEach((to, from, next) => {
   store.dispatch('initialiseStore').then(() => {
     if (!to.name) return;

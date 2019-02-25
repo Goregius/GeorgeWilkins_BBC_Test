@@ -48,7 +48,7 @@ export default {
         if (this.$store.state.allArticlesRead) {
           this.$router.push({ name: "review" });
         } else {
-          console.log(err);
+          console.error(err);
         }
       });
   }

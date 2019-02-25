@@ -21,7 +21,6 @@ const store = new Vuex.Store({
     initialiseStore(state) {
       return new Promise(resolve => {
         if (state.initialised) resolve();
-        // // TODO: uncomment when finished
         // Check if the ID exists
         if (localStorage.getItem('store')) {
           this.replaceState(
@@ -48,9 +47,7 @@ const store = new Vuex.Store({
     },
     retrieveArticle(state, article) {
       state.currentArticle = article;
-      if (!state.articlesReviewed.some(articleData => articleData.title === state.currentArticle.title)) {
-        state.articlesReviewed.push({ title: state.currentArticle.title, name: state.currentArticleName });
-      }
+      
     },
     allArticlesRead(state) {
       state.allArticlesRead = true;
@@ -63,9 +60,12 @@ const store = new Vuex.Store({
     initialiseStore({ commit }) {
       commit('initialiseStore');
     },
-    async getNewArticle({ commit, getters, dispatch }) {
+    async getNewArticle({ commit, getters, dispatch, state }) {
       if (getters.noNewArticles) {
         throw 'No more articles';
+      }
+      if (!state.articlesReviewed.some(articleData => articleData.title === state.currentArticle.title)) {
+        state.articlesReviewed.push({ title: state.currentArticle.title, name: state.currentArticleName });
       }
       commit('newArticleName');
       await dispatch('getCurrentArticle');
@@ -87,9 +87,12 @@ const store = new Vuex.Store({
         }
       })
     },
-    articlesFinished({ commit }) {
+    articlesFinished({ commit, state }) {
       // Simulating api
       return new Promise((resolve) => {
+        if (!state.articlesReviewed.some(articleData => articleData.title === state.currentArticle.title)) {
+          state.articlesReviewed.push({ title: state.currentArticle.title, name: state.currentArticleName });
+        }
         commit('allArticlesRead');
         resolve();
       });
@@ -103,9 +106,6 @@ const store = new Vuex.Store({
       commit('completed');
       return response;
     },
-    reset() {
-      localStorage.setItem('store', '{}');
-    }
   }
 });
 

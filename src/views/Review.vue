@@ -74,7 +74,6 @@ export default {
     },
     submitRankings() {
         const rankings = this.selects.map((rank, index) => ({ rank,  name: this.articles[index].name}));
-        console.log(rankings);
         this.$store.dispatch('postRankings', rankings).then(() => {
             this.$router.push({ name: 'completed' })
         });

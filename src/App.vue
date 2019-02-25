@@ -18,8 +18,11 @@ export default {
     devMode: () => process.env.NODE_ENV === "development"
   },
   methods: {
+    /*
+    * Resets the localstorage and reloads the page, effectively restarting the process.
+    */
       reset() {
-          this.$store.dispatch('reset');
+          localStorage.setItem('store', '{}');
           this.$router.go()
       }
   }
